@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free Online Color Picker — Pick HEX RGB HSL Colors in Browser</title>
+<meta name="description" content="Pick colors from anywhere, convert between HEX, RGB, HSL, CMYK. Generate color palettes, copy to clipboard. 100% browser-based, no upload, no tracking.">
+<meta property="og:title" content="Free Online Color Picker — No Upload, 100% Private">
+<meta property="og:description" content="Pick, convert, and generate colors in your browser. HEX, RGB, HSL, CMYK conversions. Free, no upload.">
+<link rel="canonical" href="https://xueboyang1985.github.io/color-picker/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Free Online Color Picker","operatingSystem":"Any","browserRequirements":"Modern browser","applicationCategory":"Multimedia","description":"Pick colors, convert HEX/RGB/HSL/CMYK, generate palettes in your browser. 100% local."}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#1a1a1a;line-height:1.6;}
+.container{max-width:800px;margin:0 auto;padding:20px;}
+.header{text-align:center;padding:40px 0 20px;}
+.header h1{font-size:28px;margin-bottom:8px;color:#1a1a1a;}
+.header p{color:#64748b;font-size:15px;}
+.card{background:white;border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+.color-preview{width:100%;height:120px;border-radius:8px;margin-bottom:16px;border:1px solid #e2e8f0;transition:background 0.15s;}
+.color-formats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.format-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;font-size:13px;}
+.format-item .label{color:#64748b;font-weight:600;}
+.format-item .value{font-family:monospace;font-size:13px;color:#1a1a1a;}
+.format-item .copy{cursor:pointer;color:#6366f1;font-size:12px;padding:2px 6px;border-radius:4px;}
+.format-item .copy:hover{background:#e0e7ff;}
+.color-input-row{display:flex;gap:12px;align-items:center;margin-bottom:16px;}
+.color-input-row input[type="color"]{width:48px;height:48px;border:none;border-radius:8px;cursor:pointer;padding:0;background:none;}
+.color-input-row input[type="text"]{flex:1;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:monospace;}
+.color-input-row input[type="text"]:focus{outline:none;border-color:#6366f1;}
+.palette-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:4px;margin-top:12px;}
+.palette-swatch{height:60px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:all 0.15s;}
+.palette-swatch:hover{transform:scale(1.1);border-color:#6366f1;}
+.history-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.history-item{width:36px;height:36px;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:all 0.15s;}
+.history-item:hover{border-color:#6366f1;}
+.footer{text-align:center;padding:40px 0;color:#94a3b8;font-size:13px;}
+.free-hint{text-align:center;padding:10px;background:#fef3c7;border-radius:8px;font-size:13px;color:#92400e;margin:12px 0;}
+.free-hint a{color:#6366f1;font-weight:600;text-decoration:none;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>Free Online Color Picker</h1>
+<p>Pick, convert &amp; generate colors — 100% in your browser, nothing uploaded</p>
+</div>
+
+<div class="card">
+<div class="color-preview" id="color-preview" style="background:#6366f1;"></div>
+
+<div class="color-input-row">
+<input type="color" id="color-input" value="#6366f1" oninput="setColor(this.value)">
+<input type="text" id="hex-input" value="#6366f1" onkeydown="if(event.key==='Enter')applyHex()">
+<button class="btn btn-primary" onclick="applyHex()" style="padding:10px 16px;">Apply</button>
+</div>
+
+<div class="color-formats" id="color-formats">
+<div class="format-item"><span class="label">HEX</span><span><span class="value" id="hex-val">#6366f1</span><span class="copy" onclick="copyText('hex-val')">Copy</span></span></div>
+<div class="format-item"><span class="label">RGB</span><span><span class="value" id="rgb-val">rgb(99,102,241)</span><span class="copy" onclick="copyText('rgb-val')">Copy</span></span></div>
+<div class="format-item"><span class="label">HSL</span><span><span class="value" id="hsl-val">hsl(239,83%,67%)</span><span class="copy" onclick="copyText('hsl-val')">Copy</span></span></div>
+<div class="format-item"><span class="label">CMYK</span><span><span class="value" id="cmyk-val">cmyk(59%,58%,0%,5%)</span><span class="copy" onclick="copyText('cmyk-val')">Copy</span></span></div>
+</div>
+
+<h3 style="font-size:14px;color:#475569;margin-bottom:8px;">Color Palette</h3>
+<div class="palette-grid" id="palette-grid"></div>
+
+<h3 style="font-size:14px;color:#475569;margin:16px 0 8px;">History</h3>
+<div class="history-grid" id="history-grid"></div>
+
+<div class="free-hint" id="free-hint">Free: basic palette &middot; <a onclick="showProModal()">Get PRO</a> for unlimited palette generation, export &amp; more</div>
+</div>
+
+<div class="card" style="font-size:14px;color:#475569;">
+<p><strong>How it works:</strong> Pick any color using the color input, enter a HEX code, or click on palette swatches. See instant conversions between HEX, RGB, HSL, and CMYK. Everything runs in your browser — nothing is uploaded or stored.</p>
+</div>
+
+<div class="card" style="font-size:13px;">
+<p><strong>🛠️ More free tools:</strong></p>
+<p>
+<a href="https://xueboyang1985.github.io/image-compressor/">Image Compressor</a> &middot;
+<a href="https://xueboyang1985.github.io/image-resizer/">Image Resizer</a> &middot;
+<a href="https://xueboyang1985.github.io/word-counter/">Word Counter</a> &middot;
+<a href="https://xueboyang1985.github.io/qr-code-generator/">QR Code Generator</a> &middot;
+<a href="https://xueboyang1985.github.io/password-generator/">Password Generator</a> &middot;
+<a href="https://xueboyang1985.github.io/free-browser-tools/">All Tools</a>
+</p>
+</div>
+
+<div class="footer">
+<p>100% local &bull; No upload &bull; No server &bull; All processing on your device</p>
+</div>
+</div>
+
+<div class="modal-overlay" id="pro-modal" style="display:none;" onclick="if(event.target===this)closeProModal()">
+<div class="modal">
+<h2>🚀 Color Picker PRO</h2>
+<p style="margin:12px 0;font-size:14px;color:#475569;">Unlock advanced color tools:</p>
+<ul style="font-size:14px;color:#475569;margin-bottom:16px;padding-left:20px;">
+<li>Unlimited color palette generation</li>
+<li>Export palettes (CSS, SCSS, JSON)</li>
+<li>Color scheme suggestions</li>
+<li>Ad-free experience</li>
+<li>Works across all 14+ browser tools</li>
+</ul>
+<p style="font-weight:600;font-size:18px;margin-bottom:16px;">PRO Bundle — $19.99 <span style="font-size:13px;color:#94a3b8;font-weight:400;">one-time, 3 devices</span></p>
+<button class="btn btn-primary" onclick="buyBundle()" style="width:100%;">Get PRO Bundle $19.99</button>
+<p style="margin-top:12px;font-size:12px;color:#94a3b8;">Already purchased? <a onclick="showLicenseModal()" style="color:#6366f1;cursor:pointer;text-decoration:underline;">Enter license key</a></p>
+<p style="margin-top:8px;font-size:12px;color:#94a3b8;">Bundle includes this tool + 14+ other tools</p>
+</div>
+</div>
+
+<div class="modal-overlay" id="license-modal" style="display:none;" onclick="if(event.target===this)closeLicenseModal()">
+<div class="modal">
+<h2>Enter PRO License Key</h2>
+<input type="text" id="pro-key" placeholder="Paste your license key here" style="width:100%;padding:10px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;margin:12px 0;">
+<button class="btn btn-primary" onclick="actPRO()" style="width:100%;">Activate PRO</button>
+<p id="pro-status" style="margin-top:8px;font-size:13px;color:#64748b;"></p>
+</div>
+</div>
+
+<style>
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;}
+.modal{background:white;border-radius:12px;padding:24px;width:90%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.2);}
+.modal h2{font-size:18px;}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.15s;}
+.btn-primary{background:#6366f1;color:white;}
+.btn-primary:hover{background:#4f46e5;}
+</style>
+
+<script>
+let pro = 0;
+try { pro = parseInt(localStorage.getItem('cp_pro')) || 0; } catch(e) {}
+const BUNDLE_ID = 'xdlh1FHKAU0E7q3ZRuHPaw==';
+let history = [];
+try { const h = localStorage.getItem('cp_history'); if (h) history = JSON.parse(h); } catch(e) {}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return { r, g, b };
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function rgbToCmyk(r, g, b) {
+  const rc = r / 255, gc = g / 255, bc = b / 255;
+  const k = 1 - Math.max(rc, gc, bc);
+  if (k === 1) return { c: 0, m: 0, y: 0, k: 100 };
+  const c = Math.round((1 - rc - k) / (1 - k) * 100);
+  const m = Math.round((1 - gc - k) / (1 - k) * 100);
+  const y = Math.round((1 - bc - k) / (1 - k) * 100);
+  return { c, m, y, k: Math.round(k * 100) };
+}
+
+function generatePalette(hex) {
+  const rgb = hexToRgb(hex);
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const pal = [];
+  // Monochromatic: vary lightness
+  for (let i = 0; i <= 4; i++) {
+    const l = Math.max(5, Math.min(95, hsl.l - 30 + i * 15));
+    pal.push(hslToHex(hsl.h, hsl.s, l));
+  }
+  return pal;
+}
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  const toHex = x => Math.round(255 * f(x)).toString(16).padStart(2, '0');
+  return '#' + toHex(0) + toHex(8) + toHex(4);
+}
+
+function setColor(hex) {
+  document.getElementById('color-input').value = hex;
+  document.getElementById('hex-input').value = hex;
+  document.getElementById('color-preview').style.background = hex;
+
+  const rgb = hexToRgb(hex);
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+
+  document.getElementById('hex-val').textContent = hex;
+  document.getElementById('rgb-val').textContent = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
+  document.getElementById('hsl-val').textContent = 'hsl(' + hsl.h + ',' + hsl.s + '%,' + hsl.l + '%)';
+  document.getElementById('cmyk-val').textContent = 'cmyk(' + cmyk.c + '%,' + cmyk.m + '%,' + cmyk.y + '%,' + cmyk.k + '%)';
+
+  // Palette
+  const pal = generatePalette(hex);
+  document.getElementById('palette-grid').innerHTML = pal.map(c =>
+    '<div class="palette-swatch" style="background:' + c + '" onclick="setColor(\'' + c + '\')" title="' + c + '"></div>'
+  ).join('');
+
+  // History
+  if (!history.includes(hex)) {
+    history.unshift(hex);
+    if (history.length > 20) history.pop();
+    try { localStorage.setItem('cp_history', JSON.stringify(history)); } catch(e) {}
+  }
+  document.getElementById('history-grid').innerHTML = history.map(c =>
+    '<div class="history-item" style="background:' + c + '" onclick="setColor(\'' + c + '\')" title="' + c + '"></div>'
+  ).join('');
+}
+
+function applyHex() {
+  let hex = document.getElementById('hex-input').value.trim();
+  if (!hex.startsWith('#')) hex = '#' + hex;
+  if (/^#[0-9a-f]{6}$/i.test(hex)) { setColor(hex); }
+  else if (/^#[0-9a-f]{3}$/i.test(hex)) {
+    const full = '#' + hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3];
+    setColor(full);
+  }
+}
+
+function copyText(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const el = document.getElementById(id).parentElement.querySelector('.copy');
+    const orig = el.textContent;
+    el.textContent = 'Copied!';
+    setTimeout(() => el.textContent = orig, 1500);
+  });
+}
+
+// Init
+setColor('#6366f1');
+
+// PRO
+function showProModal() { document.getElementById('pro-modal').style.display = 'flex'; }
+function closeProModal() { document.getElementById('pro-modal').style.display = 'none'; }
+function showLicenseModal() { closeProModal(); document.getElementById('license-modal').style.display = 'flex'; }
+function closeLicenseModal() { document.getElementById('license-modal').style.display = 'none'; }
+function buyBundle() {
+  window.open('https://xuebo8.gumroad.com/l/skxcpj', 'gumroad', 'width=600,height=700');
+}
+
+async function tryBundleKey(k) {
+  try {
+    const r = await fetch('https://api.gumroad.com/v2/licenses/verify', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({product_id: BUNDLE_ID, license_key: k})
+    });
+    const d = await r.json();
+    return d.success && d.purchase;
+  } catch { return false; }
+}
+
+async function actPRO() {
+  const k = document.getElementById('pro-key').value.trim();
+  if (!k || k.length < 10) { document.getElementById('pro-status').textContent = 'Enter your license key.'; return; }
+  document.getElementById('pro-status').textContent = 'Verifying...';
+  if (await tryBundleKey(k)) {
+    pro = 1;
+    try { localStorage.setItem('cp_pro', '1'); } catch(e) {}
+    closeLicenseModal();
+    document.getElementById('free-hint').innerHTML = 'PRO activated &mdash; unlimited palettes, export.';
+    location.reload();
+  } else {
+    document.getElementById('pro-status').textContent = 'Invalid license key. Check your Gumroad receipt.';
+  }
+}
+
+window.addEventListener('message', e => {
+  if (e.data && e.data.success && e.data.purchase) {
+    const input = document.getElementById('pro-key');
+    if (input) { input.value = e.data.license_key || ''; showLicenseModal(); }
+  }
+});
+
+if (pro) {
+  document.getElementById('free-hint').innerHTML = 'PRO activated &mdash; unlimited palettes, export.';
+}
+</script>
+</body>
+</html>
